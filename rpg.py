@@ -2,6 +2,7 @@ from rwutility import *
 import random
 import time
 from labyrinth import *
+from journal import *
 
 hands = {"name":"hands", "damage":1, "equip":["left","right"]}
 dagger = {"name":"dagger", "damage":4, "equip":["left","right"]}
@@ -137,39 +138,34 @@ class RPGame():
 
     def __init__(self,player):
         self.player = player
-        self.lines = ["Welcome to a new adventure"]
         self.userinput = Userinput()
         self.maze = Labyrinth()
         self.x = 0
         self.y = 0
-        self.scroll = 0
         self.monster = 0
+        self.log = Journal(2,2,logwidth,loglines)
+        self.log.start()
+        self.log.add("Welcome to a new adventure")
         self.doBaseScreen()
 
     def doCombatRound(self,enemy,action="attack"):
-        self.log("You attack the {}".format(enemy.name))
-        self.printlog()
-        time.sleep(.3)
+        self.log.add("You attack the {}".format(enemy.name))
+        self.sleep(.3)
         damage = self.player.damage(enemy)
         if damage == 0:
-            self.log("You missed!")
+            self.log.add("You missed!")
         else:
             enemy.hitpoints -= damage
-            self.log("You make a {} hit.\nThe {} is {}".format(attackText(damage), enemy.name, enemy.state()))
-        self.printlog()
+            self.log.add("You make a {} hit.\nThe {} is {}".format(attackText(damage), enemy.name, enemy.state()))
         if not enemy.isalive(): return False,True
         damage = enemy.damage(self.player)
-        time.sleep(.1)
-        self.log("The {} swings at you .. ".format(enemy.name))
-        self.printlog()
-        time.sleep(.3)
+        self.log.add("The {} swings at you .. ".format(enemy.name))
+        self.sleep(1)
         if damage == 0:
-            self.log (" ... and misses!")
+            self.log.add(" ... and misses!")
         else:
             self.player.hitpoints -= damage
-            self.log(" .. and makes a {} hit.".format(attackText(damage)))
-        self.printlog()
-        time.sleep(.3)
+            self.log.add(" .. and makes a {} hit.".format(attackText(damage)))
         return enemy.isalive(), self.player.isalive()
 
     def doCombat(self):
@@ -182,40 +178,32 @@ class RPGame():
         enemy.attack = 3
         enemy.defence = 1
 
-        self.log("An {} charges you!!\n".format(enemy.name))
+        self.log.add("An {} charges you!!\n".format(enemy.name))
         key = ''
-        self.printlog()
         while enemy.isalive() and self.player.isalive():
-            self.log("You can (A) Attack, (D) Dodge")
-            self.log("What do you do ? ")
-            self.printlog()
+            self.log.add("You can (A) Attack, (D) Dodge")
+            self.log.add("What do you do ? ")
             key = self.userinput.get()
             if key == "a":
                 self.doCombatRound(enemy)
                 self.updateHealth()
             if key == "d":
-                self.log("You dodge the {}s attack".format(enemy.name))
-                self.printlog()
+                self.log.add("You dodge the {}s attack".format(enemy.name))
         if enemy.isalive() and not self.player.isalive():
-            self.log("You died ... Game over")
-            self.printlog()
-            self.log("Press any key to exit ...")
-            self.printlog()
+            self.log.add("You died ... Game over")
+            self.log.add("Press any key to exit ...")
             key=''
             while key == '':
                 key = self.userinput.get()
             cls()
+            self.log.stop()
             sys.exit("Game over")
         else:
-            self.log("The battle is over.")
+            self.log.add("The battle is over.")
             self.monster = 0
             self.player.moveinventory(enemy)
             self.updateInventory()
-            self.printlog()
-            time.sleep(.3)
-            self.log("")
-            self.printlog()
-            time.sleep(.3)
+            self.log.add("")
 
     def updateInventory(self):
         locate(10,panelleft+2,"Inventory:")
@@ -238,41 +226,9 @@ class RPGame():
         self.updateInventory()
         #locate(9,panelleft,"+"+"-"*(80-panelleft)+"+")
         locate(loglines+2,1,"+"+"-"*80+"+")
-        #self.log("You are at a small cravine which ends with a dark cave entrance. \n")
-        #self.printlog()
-        #time.sleep(.3)
-        #self.log("A foul smell comes from the inside of the cave ...  \n")
-        #self.printlog()
-        #time.sleep(.3)
+        self.log.add("You have travelled through small cravine which ends at a dark cave entrance. \n")
+        self.log.add("A foul smell strikes you as you enter the cave ...  \n")
         self.location()
-
-    def log(self,logtext):
-
-        self.lines += wrapper(logtext,indent=0,width=logwidth)
-        #self.lines.append(logtext)
-        #scroll += len(self.lines)
-        while len(self.lines) > loglines:
-            self.lines = self.lines[1:]
-            self.scroll -= 1
-
-    def printlog(self):
-        while self.scroll <= len(self.lines):
-            start = loglines-self.scroll
-            for row in range(0,loglines):
-                if row >= start:
-                    line = self.lines[row-start]
-                    locate(2+row,2,line+" "*(logwidth-len(line)))
-                else:
-                    locate(2+row,2," "*logwidth)
-            self.scroll+=1
-            time.sleep(.05)
-            #self.sleep(.05)
-        #for scroll in range(0,len(self.lines)):
-        #k=loglines-len(self.lines)
-        #for line in self.lines:
-    #        locate(2+k,2,line+" "*(logwidth-len(line)))
-    #        k+=1
-
 
     def sleep(self,timer):
         stime = time.time()
@@ -292,53 +248,48 @@ class RPGame():
         if self.maze.go(self.x, self.y, EAST):
                 exits.append("(E) East")
         if len(exits)==1:
-            self.log("You reached a deadend.\nYou can only go "+exits[0])
+            self.log.add("You reached a deadend.\nYou can only go "+exits[0])
         else:
-            self.log("You can go "+doCommaSentence(exits,"or"))
-        self.printlog()
-
+            self.log.add("You can go "+doCommaSentence(exits,"or"))
 
     def playerChoice(self):
         import time
         key=''
         while key!='q':
-            self.log("You are in a small condensed room with stone walls. A torch flickers in the corner.\n")
-            self.printlog()
+            self.log.add("You are in a small condensed room with stone walls. A torch flickers in the corner.\n")
             if self.monster > 50:
                 self.doCombat()
             else:
                 self.exits()
-                self.log("What do you do ? ")
-                self.printlog()
+                self.log.add("What do you do ? ")
                 key = self.userinput.get()
                 if key=='n' and self.maze.go(self.x,self.y,NORTH):
-                    self.log("You go north\n")
+                    self.log.add("You go north\n")
                     self.y -=1
-                    self.printlog()
-                    time.sleep(.3)
+                    self.sleep(.3)
                     self.monster = random.randint(1,100)
                 elif key=='s' and self.maze.go(self.x,self.y,SOUTH):
-                    self.log("you go south\n")
+                    self.log.add("you go south\n")
                     self.y +=1
-                    self.printlog()
-                    time.sleep(.3)
+                    self.sleep(.3)
                     self.monster = random.randint(1,100)
                 elif key=='e' and self.maze.go(self.x,self.y,EAST):
-                    self.log("you go east\n")
+                    self.log.add("you go east\n")
                     self.x +=1
-                    self.printlog()
-                    time.sleep(.3)
+                    self.sleep(.3)
                     self.monster = random.randint(1,100)
                 elif key=='w' and self.maze.go(self.x,self.y,WEST):
-                    self.log("you go west\n")
+                    self.log.add("you go west\n")
                     self.x -=1
-                    self.printlog()
-                    time.sleep(.3)
+                    self.sleep(.3)
                     self.monster = random.randint(1,100)
                 else:
-                    self.log("You cannot..\n")
-                    self.printlog()
-
+                    self.log.add("You cannot..\n")
+        self.log.add("Adventure ended .. ")
+        self.sleep(2)
+        self.log.stop()
+        cls()
+        print("Thanks for playing .. See ya next time ...")
 
 #print(goDown(10))
 
@@ -365,6 +316,3 @@ def garbage():
 
 player = NPC("Rasmus")
 game = RPGame(player)
-
-#cls()
-#time.sleep(10)
