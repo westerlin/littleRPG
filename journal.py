@@ -21,12 +21,18 @@ class Journal:
                 for row in range(0,self.loglines):
                     if row >= start:
                         line = self.lines[row-start]
-                        locate(self.y+row,self.x,line+" "*(self.width-len(line)))
+                        try:
+                            locate(self.y+row,self.x,line+" "*(self.width-len(line)))
+                        except Exception:
+                            pass
                     else:
-                        locate(self.y+row,self.x," "*self.width)
+                        try:
+                            locate(self.y+row,self.x," "*self.width)
+                        except Exception:
+                            pass
                 self.scrollLine+=1
                 time.sleep(0.05)
-        #time.sleep(1)
+            time.sleep(0.5)
 
 
     def start(self):

@@ -9,6 +9,7 @@ dagger = {"name":"dagger", "damage":4, "equip":["left","right"]}
 shortsword = {"name":"short sword", "damage":6, "equip":["left","right"]}
 robes = {"name":"robes", "defence":1, "equip":["worn"]}
 gold = {"name":"gold crowns"}
+healingpotion = {"name":"healing potion [P]"}
 
 class InventoryItem():
     def __init__(self,item,number=1):
@@ -104,7 +105,8 @@ class NPC():
             output += key
             if invrec.number > 1:
                 output += " (x{})".format(invrec.number)
-            output += sepSign(key,inventories)
+            #output += sepSign(key,inventories)
+            output += "\n"
         if output =="": output = "Empty"
         return output
 
@@ -117,12 +119,19 @@ class NPC():
             else:
                 ownrec.number += invrec.number
 
+    def useInventory(self,key):
+        if key == 'p' and self.dropconsume(healingpotion.get("name")):
+            self.hitpoints += random.randint(3,8)
+            self.hitpoints = min(self.hitpoints,self.maxhitpoints)
+            return True
+        return False
+
 #print(dir(rwutility))
 cls()
 
-logwidth=40
-loglines=20
-panelleft=45
+logwidth=70
+loglines=40
+panelleft=75
 
 
 def attackText(damage):
@@ -138,6 +147,9 @@ class RPGame():
 
     def __init__(self,player):
         self.player = player
+
+        self.player.pickup(dict(healingpotion),1)
+
         self.userinput = Userinput()
         self.maze = Labyrinth()
         self.x = 0
@@ -157,7 +169,9 @@ class RPGame():
         else:
             enemy.hitpoints -= damage
             self.log.add("You make a {} hit.\nThe {} is {}".format(attackText(damage), enemy.name, enemy.state()))
-        if not enemy.isalive(): return False,True
+        return enemy.isalive(),True
+
+    def doEnemyCombat(self,enemy):
         damage = enemy.damage(self.player)
         self.log.add("The {} swings at you .. ".format(enemy.name))
         self.sleep(1)
@@ -174,6 +188,7 @@ class RPGame():
         enemy.hitpoints = random.randint(5,10)
         enemy.equip(dict(dagger))
         enemy.equip(dict(robes))
+        enemy.pickup(dict(healingpotion),1)
         enemy.pickup(dict(gold),random.randint(1,10))
         enemy.attack = 3
         enemy.defence = 1
@@ -181,14 +196,28 @@ class RPGame():
         self.log.add("An {} charges you!!\n".format(enemy.name))
         key = ''
         while enemy.isalive() and self.player.isalive():
-            self.log.add("You can (A) Attack, (D) Dodge")
+            self.log.add("You can [A] Attack, [D] Dodge")
             self.log.add("What do you do ? ")
             key = self.userinput.get()
             if key == "a":
-                self.doCombatRound(enemy)
+                enemyalive, playeralive = self.doCombatRound(enemy)
+                if enemyalive:
+                    self.doEnemyCombat(enemy)
                 self.updateHealth()
-            if key == "d":
-                self.log.add("You dodge the {}s attack".format(enemy.name))
+            elif key == "d":
+                if random.randint(0,10)>3:
+                    self.log.add("You dodge the {}s attack".format(enemy.name))
+                else:
+                    if enemyalive:
+                        self.doEnemyCombat(enemy)
+            elif self.player.useInventory(key):
+                self.log.add("Aahhhh .. You drank a potion .. ")
+                self.updateHealth()
+                self.updateInventory()
+                if enemy.isalive():
+                    self.doEnemyCombat(enemy)
+            else:
+                self.log.add("You cannot .. ")
         if enemy.isalive() and not self.player.isalive():
             self.log.add("You died ... Game over")
             self.log.add("Press any key to exit ...")
@@ -218,14 +247,14 @@ class RPGame():
 
     def doBaseScreen(self):
         #cls()
-        locate(1,1,"+"+"-"*80+"+")
+        locate(1,1,"+"+"-"*120+"+")
         locate(2,panelleft+2,"Player Name:"+self.player.name)
         locate(4,panelleft+2,"Attack: +"+str(self.player.attackbonus()))
         locate(6,panelleft+2,"Defence: +"+str(self.player.defencebonus()))
         self.updateHealth()
         self.updateInventory()
         #locate(9,panelleft,"+"+"-"*(80-panelleft)+"+")
-        locate(loglines+2,1,"+"+"-"*80+"+")
+        locate(loglines+2,1,"+"+"-"*120+"+")
         self.log.add("You have travelled through small cravine which ends at a dark cave entrance. \n")
         self.log.add("A foul smell strikes you as you enter the cave ...  \n")
         self.location()
@@ -240,13 +269,13 @@ class RPGame():
     def exits(self):
         exits = []
         if self.maze.go(self.x, self.y, NORTH):
-                exits.append("(N) North")
+                exits.append("[N] North")
         if self.maze.go(self.x, self.y, SOUTH):
-                exits.append("(S) South")
+                exits.append("[S] South")
         if self.maze.go(self.x, self.y, WEST):
-                exits.append("(W) West")
+                exits.append("[W] West")
         if self.maze.go(self.x, self.y, EAST):
-                exits.append("(E) East")
+                exits.append("[E] East")
         if len(exits)==1:
             self.log.add("You reached a deadend.\nYou can only go "+exits[0])
         else:
@@ -283,13 +312,18 @@ class RPGame():
                     self.x -=1
                     self.sleep(.3)
                     self.monster = random.randint(1,100)
+                elif self.player.useInventory(key):
+                    self.log.add("Aahhhh .. You drank a potion .. ")
+                    self.updateHealth()
+                    self.updateInventory()
                 else:
                     self.log.add("You cannot..\n")
         self.log.add("Adventure ended .. ")
         self.sleep(2)
         self.log.stop()
         cls()
-        print("Thanks for playing .. See ya next time ...")
+        print("Thanks for playing .. See ya next time ...\n")
+
 
 #print(goDown(10))
 

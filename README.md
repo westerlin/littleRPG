@@ -1,6 +1,6 @@
 ### Simple little roleplaying game (Hack'n Slash)
 
-This is a simple little game where I wanted to recreate an old school RPG game I had fun playing on C64 called "Halls of Death" (made in Commodore Basic).
+This is a simple little game where I wanted to recreate an old school RPG game I had fun playing on C64 called "Halls of Death" (made in Commodore Basic) by Stewart Sargaison.
 
 You run the game by running (python 3.6 is required):
 
